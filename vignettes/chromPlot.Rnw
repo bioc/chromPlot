@@ -1,0 +1,750 @@
+%\VignetteIndexEntry{General Manual}
+%\VignetteIndexEntry{Global visualization tool of genomic data}
+%\VignetteDepends{stats, utils, graphics, grDevices, datasets, base, biomaRt}
+%\VignetteKeywords{Global, Kariogram}
+%\VignettePackage{chromPlot}
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\parskip 3ex % espacio entre parrafos.
+
+\renewcommand{\baselinestretch}{1.5}
+\title{The chromPlot user's guide}
+\author{Karen Y. Oróstica and Ricardo A. Verdugo}
+
+
+
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rclass}[1]{{\textit{#1}}}
+\newcommand{\R}[0]{{\textit{R}}}
+
+\newcommand{\inclfig}[3]{%
+ \begin{figure}[htbp] \begin{center}
+   \includegraphics[width=#2]{#1}
+   \caption{\label{#1}#3}
+ \end{center} \end{figure}
+}
+
+      % margen izquierdo
+
+\usepackage{Sweave}
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+
+\maketitle
+
+\tableofcontents
+
+
+%\tableofcontents
+\newpage
+\section{Introduction}
+
+
+Visualization is an important step in data analysis workflows for genomic
+data. Here, we introduce the use of \texttt{chromPlot}, an R package for
+global visualization of genome-wide data. \texttt{chromPlot} is suitable for
+any organism with linear chromosomes. Data is visualized along chromosomes in
+a variety of formats such as segments, histograms, points and lines. One plot
+may include multiple tracks of data, which can be placed inside or on either
+side of the chromosome body representation.
+
+The package has proven to be useful in a variety of applications, for
+instance, detecting chromosomal clustering of differentially expressed genes,
+combining diverse information such as genetic linkage to phenotypes and gene
+expression, quality controlling genome resequencing experiments, visualizing
+results from genome-wide scans for positive selection, synteny between two
+species, among others.
+
+\section{Creating a plot with genomic coordinates}
+
+The \texttt{gaps} argument is used to tell \texttt{chromPlot} what system of
+coordinates to use. The information is provided as a table following the format
+for the `Gap' track in the Table Browser of the UCSC
+website\footnote{https://genome.ucsc.edu/}. From this table, \texttt{chromPlot}
+extracts the number of chromosomes, chromosomes names and lengths, and the
+position of centromeres (shown as solid circles). The tables for the latest
+genome build of human and mouse are provided with package (\texttt{hg\_gap} and
+\texttt{mm10\_gap}) and are loaded by \texttt{data()}). The user can use tables
+downloaded from the UCSC Table Browser for other genomes. If no data is provided
+to \texttt{gaps}, plotting is still possible as long as one of \texttt{annot1},
+\texttt{bands} or \texttt{org} arguments is provided. The information will be
+taken from those objects, in that preference order, except for centromers which
+will not be plotted.
+
+In this example, we will plot the chromosomes in the hg19 human genome.
+\texttt{chromPlot} returns some messages when doing calculations. Here, it just
+retrieves the number of bases in each chromosomes. Messages will be omitted in
+next examples.
+
+\clearpage
+
+<<createGraphminus1, fig=TRUE, echo=TRUE, echo=TRUE>>=
+library("chromPlot")
+data(hg_gap)
+head(hg_gap)
+
+chromPlot(gaps=hg_gap)
+@
+\section{Input data}
+
+\texttt{chromPlot} has 8 arguments that can take objects with genomic
+data: (\texttt{annot1}, \texttt{annot2}, \texttt{annot3}, \texttt{annot4},
+\texttt{segment}, \texttt{segment2}, \texttt{stat} and \texttt{stat2}. Data 
+provided to these arguments are internally converted to data tracks that can
+be plotted. These arguments take their input in any of these formats:
+\begin{enumerate}
+  \item A string with a filename or URL
+  \item A data frame
+  \item A GRanges object (\texttt{GenomicRanges} package)
+\end{enumerate}
+
+Additionally, the user may obtain a list of all ensemble genes by providing 
+and organism name to the \texttt{org} argument (ignored if data is provided
+to \texttt{annot1}).
+
+The data provided as objects of class data.frame must follow the BED format
+in order to be used as tracks by \texttt{chromPlot}\footnote{https://genome.ucsc.edu/FAQ/FAQformat.html\#
+format1}. However, as opposed to the files in BED format, track must have
+column names. The columns Chrom (character class), Start (integer class) and
+End (integer class) are mandatory. \texttt{chromPlot} can work with
+categorical or quantitative data. The categorical data must have a column
+called Group (character class), which represents the categorical variable to
+classify each genomic element. In the case of quantitative data, the user
+must indicate the column name with the score when calling
+\texttt{chromPlot()} by setting the \texttt{statCol} parameter.\\
+Examples of different data tables will be shown throughout this tutorial. All
+data used in this vignette are included in \texttt{chromPlot} (inst/extdata
+folder). In order to keep the package size small, we have included only a few
+chromosomes in each file. We use mostly public data obtained from the UCSC
+Genome Browser\footnote{http://genome.ucsc.edu/} or from The 1000 Genomes
+Selection Browser 1.0\footnote{http://hsb.upf.edu/}, i.e. the iHS, Fst and
+xpehh tables shown below.
+
+In the following example code, an annotation package from Bioconductor to
+display the density of all transcripts in the genome. We load a TxDb object
+(inherit class from AnnotationDb) with all known gene transcripts in the hg19
+human genome. We extract the transcripts for this gene definition and plot
+them genome-wide. The transcripts object(\texttt{txgr}) has \texttt{GRanges}
+class, from \emph{GenomicRanges} package. The The \emph{GenomeFeatures}
+package is required to extract the transcripts from the annotation object.
+
+%
+<<createGraph0, fig=FALSE, echo=TRUE, message=FALSE>>=
+library("TxDb.Hsapiens.UCSC.hg19.knownGene")
+txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
+
+library(GenomicFeatures)
+txgr <- transcripts(txdb)
+txgr
+@
+
+\clearpage
+
+<<createGraph0_plot, fig=TRUE, echo=TRUE, message=FALSE, height=7, results=hide>>=
+chromPlot(gaps=hg_gap, annot1=txgr)
+@
+
+\section{Types of data visualization}
+
+%Gráficos en el cuerpo del cromosoma
+\subsection{Chromosomes banding}
+
+\subsubsection{Plotting G banding}
+The \texttt{chromPlot} package can create idiograms by providing a `cytoBandIdeo' table taken from the Table Browser at the UCSC Genome Browser website. These tables are
+provided with the package for human and mouse (\texttt{hg\_cytoBandIdeo} and \texttt{mm10\_cytoBandIdeo}).\\
+
+In the next code, we show how to obtain an idiogram with a subset of
+chromosomes for human:
+
+%
+<<createGraph1, echo=TRUE>>=
+data(hg_cytoBandIdeo)
+head(hg_cytoBandIdeo)
+@
+
+\clearpage
+You can choose chromosomes using \texttt{chr} parameter, which receives a
+vector with the name of the chromosomes.
+
+%
+<<createGraph2, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, chr=c("1", "2", "3", "4", "5",
+"6"), figCols=6)
+@
+
+\clearpage
+
+
+\subsubsection{Genomic elements}
+
+\texttt{chromplot} can plot the location of genomic elements in the
+chromosomal body. For this example, we will use a table of refSeq genes taken
+from the UCSC Genome Browser. The file included in the package contains only
+chromosomes 19 to 21 to keep the package's size small.
+
+%
+<<createGraph3, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file1       <- system.file("extdata", "hg19_refGeneChr19-21.txt",
+package = "chromPlot")
+refGeneHg        <- read.table(data_file1, sep="\t", header=TRUE,
+stringsAsFactors=FALSE)
+refGeneHg$Colors <- "red"
+head(refGeneHg)
+@
+\clearpage
+<<createGraph4, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=hg_gap, bands=refGeneHg, chr=c(19, 20, 21), figCols=3)
+@
+\clearpage
+
+\subsubsection{Assigning different colors}
+\label{sec:arbitrarycolors}
+It is possible to use different colors for each genomic element. However, you
+should keep in main that humans can only distinguish a limited number of
+colors in a plot. Therefore, for continuous variables, it is useful to create
+bins of data and assign colors to each bin.
+
+<<createGraph5, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file2 <- system.file("extdata", "Fst_CEU-YRI-W200Chr19-21.bed", package
+= "chromPlot")
+fst  <- read.table(data_file2, sep="\t", stringsAsFactors=FALSE, header=TRUE)
+head(fst)
+fst$Colors <-
+ifelse(fst$win.FST >= 0     & fst$win.FST  < 0.025, "gray66",
+ifelse(fst$win.FST >= 0.025 & fst$win.FST  < 0.05,  "grey55",
+ifelse(fst$win.FST >= 0.05  & fst$win.FST  < 0.075, "grey35",
+ifelse(fst$win.FST >= 0.075 & fst$win.FST  < 0.1,   "black",
+ifelse(fst$win.FST >= 0.1   & fst$win.FST  < 1,     "red","red")))))
+head(fst)
+@
+\clearpage
+<<createGraph6, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=hg_gap, chr=c(19, 20, 21), bands=fst, figCols=3)
+@
+\clearpage
+
+\subsubsection{Grouping elements by category}
+\label{sec:groupband}
+If elements are assigned to categories in the Group column of the track,
+\texttt{chromplot} creates a legend. If the Colors column is available, it
+will use custom colors, otherwise it assigns arbitrary colors.
+
+<<createGraph7, fig=FALSE, echo=TRUE,message=TRUE>>=
+fst$Group <-
+ifelse(fst$win.FST >= 0     & fst$win.FST < 0.025, "Fst 0-0.025",
+ifelse(fst$win.FST >= 0.025 & fst$win.FST < 0.05,  "Fst 0.025-0.05",
+ifelse(fst$win.FST >= 0.05  & fst$win.FST < 0.075, "Fst 0.05-0.075",
+ifelse(fst$win.FST >= 0.075 & fst$win.FST < 0.1,   "Fst 0.075-0.1",
+ifelse(fst$win.FST >= 0.1   & fst$win.FST < 1,     "Fst 0.1-1","na")))))
+head(fst)
+@
+\clearpage
+<<createGraph8, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=hg_gap, chr=c(19, 20, 21), bands=fst, figCols=3)
+@
+
+\clearpage
+\subsubsection{Synteny}
+
+This package is able of represent genomic regions that are conserved between
+two species. \texttt{chromplot} can work with AXT alignment files
+\footnote{https://genome.ucsc.edu/goldenPath/help/axt.html}. Each alignment
+block in an AXT file contains three lines: a summary line (alignment
+information) and 2 sequence lines:
+  
+  0 chr19 3001012 3001075 chr11 70568380 70568443 - 3500\\
+TCAGCTCATAAATCACCTCCTGCCACAAGCCTGGCCTGGTCCCAGGAGAGTGTCCAGGCTCAGA\\
+TCTGTTCATAAACCACCTGCCATGACAAGCCTGGCCTGTTCCCAAGACAATGTCCAGGCTCAGA\\
+
+1 chr19 3008279 3008357 chr11 70573976 70574054 - 3900\\
+CACAATCTTCACATTGAGATCCTGAGTTGCTGATCAGAATGGAAGGCTGAGCTAAGATGAGCGA\\
+CACAGTCTTCACATTGAGGTACCAAGTTGTGGATCAGAATGGAAAGCTAGGCTATGATGAGGGA\\
+
+Moreover, \texttt{chromplot} is able to work with  BED format. In the next
+example,  we show how to graph sinteny between human and mouse from BED file.
+%
+<<createGraph9, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file3 <- system.file("extdata", "sinteny_Hg-mm10Chr19-21.txt", package =
+"chromPlot")
+sinteny    <- read.table(data_file3, sep="\t", stringsAsFactors=FALSE,
+header=TRUE)
+head(sinteny) 
+@
+\clearpage
+<<createGraph10, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=10>>=
+chromPlot(gaps=hg_gap, bands=sinteny, chr=c(19:21), figCols=3)
+@
+
+\clearpage
+\subsection{Histograms}
+
+\subsubsection{Single histogram}
+The user can generate a histogram for any of the following tracks:
+\texttt{annot1}, \texttt{annot2}, \texttt{annot3}, \texttt{annot4},
+\texttt{segment}, and \texttt{segment2}. Histograms are created when the
+number of genomic elements in a track exceeds a maximum set by the
+\texttt{maxSegs} argument (200 by default) or the maximum size of the
+elements is < \texttt{bin} size (1 Mb by default). Histograms can be plotted
+on either side of each chromosome. The side can be set for each track
+independently (see section~\ref{sec:chrSide}).
+
+The following example represents all annotated genes in the human genome
+\footnote{https://genome.ucsc.edu/cgi-bin/hgTables}. You can also use BiomaRt
+package
+\footnote{http://bioconductor.org/packages/2.3/bioc/html/biomaRt.html} to get
+annotated information remotely.\\
+
+<<createGraph11, fig=FALSE, echo=TRUE, message=TRUE>>=
+refGeneHg$Colors <- NULL
+head(refGeneHg)
+@
+\clearpage
+<<createGraph12, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=hg_gap, bands=hg_cytoBandIdeo, annot1=refGeneHg, chr=c(19:21),
+figCols=3)
+@
+
+Using biomaRt package:
+\begin{Schunk}
+\begin{Sinput}
+> chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, org="mmusculus")
+\end{Sinput}
+\end{Schunk}
+
+
+(Same figure as above).\\
+
+
+\clearpage
+
+\subsubsection{Stacked histograms: multiple files}
+
+It is possible to superimpose multiple histograms. This feature can be useful
+to represent processed data, obtained after of several stages of filtering or
+selection. For example, in microarray experiments, different colors of each
+histogram bar can represent the total number of genes (red), genes
+represented on the array (yellow), differentially over-expressed genes
+(green) and differentially sub-expressed genes (blue) in that order.
+The \texttt{annot3} and \texttt{annot4} parameters receive filtered and
+selected subsets of data array respectively.
+Given that both \texttt{annot4} and \texttt{annot3} contain information  that
+has been 'selected'  and 'filtered', the resulting histogram is quite small
+compared to gene density (red histogram).
+
+%
+<<createGraph13, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file4 <-system.file("extdata", "mm10_refGeneChr2-11-17-19.txt", package= "chromPlot")
+ref_mm10   <-read.table(data_file4, sep="\t", stringsAsFactors=FALSE, header
+=TRUE)
+data_file5 <- system.file("extdata", "arrayChr17-19.txt", package = "chromPlot")
+array      <- read.table(data_file5, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+head(ref_mm10)
+head(array, 4)
+@
+\clearpage
+Now, we will load the GenesDE object, and then we will obtain a subset of
+them, that it will contain over-expressed (nivel column equal to +) and
+sub-expressed (nivel column equal to -) genes.
+%
+<<createGraph14, fig=FALSE, echo=TRUE, message=FALSE>>=
+data(mm10_gap)
+data_file6  <- system.file("extdata", "GenesDEChr17-19.bed", package =
+"chromPlot")
+GenesDE     <- read.table(data_file6, sep="\t", header=TRUE, 
+stringsAsFactors=FALSE)
+head(GenesDE)
+DEpos       <- subset(GenesDE, nivel%in%"+")
+DEneg       <- subset(GenesDE, nivel%in%"-")
+head(DEpos, 4)
+head(DEneg, 4)
+@
+\clearpage
+<<createGraph15, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=mm10_gap, bands=mm10_cytoBandIdeo, annot1=ref_mm10,
+annot2=array, annot3=DEneg, annot4=DEpos, chr=c( "17", "18", "19"), figCols=3, 
+chrSide=c(-1, -1, -1, 1, -1, 1, -1, 1), noHist=FALSE)
+@
+
+\clearpage
+\subsubsection{Stacked histograms: single file}
+
+
+\texttt{chromplot} can also show  stacked histograms from a data.frame with
+a `Group' column containing category for each genomic elements. The \texttt{segment}
+and \texttt{segment2} arguments can take this type of input. As an example, we will
+plot differentially expressed genes classified by monocytes subtypes
+(Classical-noClassical and intermediate) on the right side of the chromosome,
+and ta histogram of refSeq genes on the left side.
+
+<<createGraph16, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file7 <- system.file("extdata", "monocitosDEChr19-21.txt", package =
+"chromPlot")
+monocytes  <- read.table(data_file7, sep="\t", header=TRUE,
+stringsAsFactors=FALSE)
+head(monocytes)
+@
+\clearpage
+<<createGraph17, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=hg_gap, bands=hg_cytoBandIdeo, annot1=refGeneHg,
+segment=monocytes, chrSide=c(-1,1,1,1,1,1,1,1), figCols=3, chr=c(19:21))
+@
+
+\clearpage
+\subsection{XY plots}
+The arguments \texttt{stat} and \texttt{stat2} can take tracks of genomic
+elements associated with numeric values. The user can choose between lines or
+points for representing each data point along chromosomes by using the
+\texttt{statTyp} parameter (p = point, l = line). The \texttt{statCol}
+parameter must contain the name of the column containing continuous values in
+\texttt{stat} (use \texttt{statCol2} for \texttt{stat2}).
+It is possible to apply a statistical function (mean, median, sum etc) to the
+data using \texttt{statSumm} parameters ('none' by default). If the value is
+'none', chromPlot will not apply any statistical function.
+
+<<createGraph18, fig=FALSE, echo=TRUE, message=TRUE>>=
+head(fst)
+@
+\clearpage
+\subsubsection{Using points}
+%
+<<createGraph19, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=4>>=
+chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, stat=fst, statCol="win.FST",
+statName="win.FST", statTyp="p", chr=c(19:21), figCols=3, scex=0.7, spty=20,
+statSumm="none")
+@
+
+or calculating a mean of each value per bin by giving setting
+\texttt{statSum="mean"}. 
+
+<<createGraph20, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=4>>=
+chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, stat=fst, statCol="win.FST",
+statName="win.FST", statTyp="p", chr=c(19:21), figCols=3, scex=0.7, spty=20,
+statSumm="mean")
+@
+
+\subsubsection{Using connected lines}
+%
+<<createGraph21, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=4>>=
+chromPlot( bands=hg_cytoBandIdeo, gaps=hg_gap, stat=fst, statCol="win.FST",
+statName="win.FST", statTyp="l", chr=c(19:21), figCols=3, statSumm="none")
+@
+Here, we can smooth the graph by using a mean per bin:
+<<createGraph22, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=4>>=
+chromPlot( bands=hg_cytoBandIdeo, gaps=hg_gap, stat=fst, statCol="win.FST",
+statName="win.FST", statTyp="l", chr=c(19:21), figCols=3, statSumm="mean")
+@
+
+Note that the \texttt{statSumm} argument can receive any function name ("none"
+is the default). No sanity check is performed, and thus the user is responsible
+to make sure that using that function makes sense for the data at hand.
+
+\subsubsection{Coloring by datapoints exceeding a threshold}
+We will plot to two tracks of data with continuous values simultaneously
+using the  (\texttt{stat} and \texttt{stat2} arguments. A third one will be
+shown on the chromosomal body after being categorized in arbitrary bins (see
+section~\ref{sec:groupband}). The values on both tracks of continuous data
+will be colored according to a threshold provided by the user in the
+\texttt{statThreshold}  and \texttt{statThreshold2} parameters, which are
+applied for the \texttt{stat} and \texttt{stat2} tracks, respectively. 
+
+<<createGraph23, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file8 <- system.file("extdata", "iHS_CEUChr19-21", package = "chromPlot")
+ihs <- read.table(data_file8, sep="\t", stringsAsFactors=FALSE, header=TRUE)
+head(ihs)
+data_file9 <-system.file("extdata", "XPEHH_CEU-YRIChr19-21", package="chromPlot")
+xpehh <-read.table(data_file9, sep="\t", stringsAsFactors=FALSE, header=TRUE)
+head(xpehh)
+@
+We can label any data point by providing and an 'ID' column with labels. ID
+values of NA, NULL, or empty ("") are ignored. Here, we will only label
+single data point with the maximum XP value. 
+<<createGraph23-2, fig=FALSE, echo=TRUE, message=FALSE>>=
+xpehh$ID <- ""
+xpehh[which.max(xpehh$XP),"ID"] <- xpehh[which.max(xpehh$XP),"Name"]
+head(xpehh)
+@
+\clearpage
+<<createGraph24, fig=TRUE, echo=TRUE, message=FALSE, results=hide, width=20, height=25>>=
+chromPlot(gaps=hg_gap, bands=fst, stat=ihs, stat2=xpehh, statCol="iHS",
+statCol2="XP", statName="iHS", statName2="normxpehh", colStat="red", colStat2="blue", statTyp="p", scex=2, spty=20, statThreshold=1.2, statThreshold2=1.5, chr=c(19:21),
+bin=1e6, figCols=3, cex=2.5, statSumm="none", legChrom=19, stack=FALSE)
+@
+
+\clearpage
+
+\subsubsection{Plotting LOD curves}
+A potential use of connected lines is plotting the results from QTL mapping.
+Here we show a simple example of how to plot the LOD curves from a QTL
+mapping experiment in mice along a histogram of gene density. For
+demonstration purposes, we use a simple formula for converting cM to bp. A
+per-chromosome map or an appropriate online tool
+(\url{http://cgd.jax.org/mousemapconverter/}) should be used in real
+applications.
+
+<<createGraphQTL, fig=TRUE, echo=TRUE, message=FALSE, results=hide, width=8>>=
+library(qtl)
+data(hyper)
+hyper <- calc.genoprob(hyper, step=1)
+hyper <- scanone(hyper)
+QTLs <- hyper
+colnames(QTLs) <- c("Chrom", "cM", "LOD")
+QTLs$Start <- 1732273 + QTLs$cM * 1895417
+chromPlot(gaps=mm10_gap, bands=mm10_cytoBandIdeo, annot1=ref_mm10, stat=QTLs,
+statCol="LOD", chrSide=c(-1,1,1,1,1,1,1,1), statTyp="l", chr=c(2,17:18), figCols=3)
+@
+
+\subsubsection{Plotting a map with IDs}
+
+In the previous section, we used an ID to highly one point from a track with
+continuous values. However, \texttt{chromPlot} can display many IDs, while
+trying to avoid overlapping of text labels. Points are ordered by position
+and the overlapping labels are moved downwards. This is useful for displaying
+maps, e.g. genetic of physical maps of genetic markers. For this the user
+must ensure that the table contains the ID column. The values in that column
+will be plotted as labels next to the data point.
+
+In the following example we show the IDs of of a small panel of 150 SNPs. We
+will use a different color for known (rs) and novel (non rs) SNPs. By setting
+statType="n" we avoid plotting the actual data point.
+
+<<createGraph25, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file10 <- system.file("extdata",
+"CLG_AIMs_150_chr_hg19_v2_SNP_rs_rn.csv",
+package = "chromPlot")
+AIMS    <- read.csv(data_file10, sep=",")
+head(AIMS)
+@
+\clearpage
+<<createGraph26, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=hg_gap, bands=hg_cytoBandIdeo, stat=AIMS, statCol="Value",
+statName="Value", noHist=TRUE, figCols=4, cex=0.7, chr=c(1:8), statTyp="n",
+chrSide=c(1,1,1,1,1,1,-1,1))
+@
+
+\clearpage
+\subsection{Segments}
+
+\subsubsection{Large stacked segments}
+
+\texttt{chromplot} allows for the user represent large segments as vertical
+bars on either side of the chromosomal bodies. If the maximum segment size of
+segments is smaller than \texttt{bin} (1 Mb by default), or there are more
+segments than \texttt{maxSegs} (200 by default), they will be plotted as a
+histogram. However, the user can change this behavior by setting the
+\texttt{noHist} parameter to TRUE. If a 'Group' column is present in the
+table of segments, it is used as a category variable and different colors are
+used for segments in each category. The user can set the colors to be used in
+the \texttt{colSegments} and \texttt{colSegments2} arguments.\\
+
+This type of graph is useful for displaying, for instance, QTLs (quantitative
+trait locus), due to the fact that they cover large genomic regions. Here we
+show how to graph segments on the side of the chromosomal body. By setting
+\texttt{stack=TRUE} (default), drawing space is saved by plotting all
+nonoverlapping segments at the minimum possible distance from the chromosome.
+Otherwise, they are plotted at increasing distance from the chromosome,
+regardless of whether they overlap or not.
+
+%
+<<createGraph27, fig=FALSE, echo=TRUE, message=TRUE>>=
+data_file12 <-system.file("extdata", "QTL.csv", package = "chromPlot")
+qtl        <-read.table(data_file12, sep=",", header =TRUE,
+stringsAsFactors=FALSE)
+head(qtl)
+@
+\clearpage
+<<createGraph28, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=8>>=
+chromPlot(gaps=mm10_gap, segment=qtl, noHist=TRUE, annot1=ref_mm10,
+chrSide=c(-1,1,1,1,1,1,1,1), chr=c(2,11,17), stack=TRUE, figCol=3,
+bands=mm10_cytoBandIdeo)
+@
+\clearpage
+\subsubsection{Large stacked segments groupped by two categories}
+When the segments have more than one category (up to two supported), they are
+differentiated by a combination of color and shape for a point plotted in the
+middle of the segment. The segment itself is shown in gray. The first
+category is taken from the 'Group' column and establishes the color of the
+symbol. The second category is taken from the 'Group2' column and determines
+the symbol shape.\\
+In the following example, we use data for SNPs associated with phenotypes and
+ethnicity, taken from phenoGram website 
+\footnote{http://visualization.ritchielab.psu.edu/phenograms/examples}. 
+<<createGraph29, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file11 <- system.file("extdata", "phenogram-ancestry-sample.txt",
+package = "chromPlot")
+pheno_ancestry    <- read.csv(data_file11, sep="\t", header=TRUE)
+head(pheno_ancestry)
+@
+\clearpage
+<<createGraph30, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=6, width=8>>=
+chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, segment=pheno_ancestry,
+noHist=TRUE, chr=c(3:5), figCols=3, legChrom=5)
+@
+
+\clearpage
+
+Since the data contain SNPs positions, the segments are only 1 bp long and
+the resulting lines are too small to be seen. For display purposes, we will
+increase the segments' sizes by adding a 500Kb pad to either side of each
+SNP.
+
+<<createGraph31, fig=FALSE, echo=TRUE, message=FALSE>>=
+pheno_ancestry$Start<-pheno_ancestry$Start-5e6
+pheno_ancestry$End<-pheno_ancestry$End+5e6
+head(pheno_ancestry)
+@
+\clearpage
+<<createGraph32, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=6, width=8>>=
+chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, segment=pheno_ancestry,
+noHist=TRUE, chr=c(3:5), figCols=3, legChrom=5)
+@
+
+\clearpage
+\subsubsection{Large non-overlapping segments}
+
+\texttt{chromplot} can categorize genomic regions (Group column) and then
+represent them with different colors. Also the package is capable of showing
+not-overlapping regions along the chromosome. The following example shows the
+ancestry of each chromosomal region. The user can obtain the annotation data
+updated through the biomaRt package.
+
+%
+<<createGraph33, fig=FALSE, echo=TRUE, message=FALSE>>=
+data_file13 <- system.file("extdata", "ancestry_humanChr19-21.txt", package =
+"chromPlot")
+ancestry    <- read.table(data_file13, sep="\t",stringsAsFactors=FALSE,
+header=TRUE)
+head(ancestry)
+@
+\clearpage
+<<createGraph34, fig=TRUE, echo=TRUE, message=FALSE, results=hide,height=8 >>=
+chromPlot(gaps=hg_gap, bands=hg_cytoBandIdeo, chrSide=c(-1,1,1,1,1,1,1,1),
+noHist=TRUE, annot1=refGeneHg, figCols=3, segment=ancestry, colAnnot1="blue",
+chr=c(19:21), legChrom=21)
+@
+
+\clearpage
+\subsection{Multiple data types}
+The \texttt{chromPlot} package is able to plot diverse types of tracks
+simultaneously.
+
+%
+<<createGraph35, fig=TRUE, echo=TRUE, message=FALSE, height=7, results=hide >>=
+chromPlot(stat=fst, statCol="win.FST", statName="win.FST", gaps=hg_gap,
+bands=hg_cytoBandIdeo, statTyp="l", noHist=TRUE, annot1=refGeneHg,
+chrSide=c(-1, 1, 1, 1, 1, 1, 1, 1), chr = c(19:21), figCols=3, cex=1)
+@
+
+\clearpage
+Here we show a figure from in Verdugo et al. (2010), to represent the
+association between the genetic divergence regions (darkred regions in the
+body of the chromosomes), the QTLs (color bars on the right of the
+chromosome), and the absence of association with gene density shown
+(histogram on the left side of the chromosomes).
+
+%
+<<createGraph36, fig=FALSE, echo=TRUE, message=TRUE>>=
+options(stringsAsFactors = FALSE);
+data_file14<-system.file("extdata", "donor_regions.csv", package = "chromPlot")
+region<-read.csv(data_file14, sep=",")
+region$Colors    <- "darkred"
+head(region)
+head(qtl)
+@
+\clearpage
+<<createGraph37, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=mm10_gap, segment=qtl, noHist=TRUE, annot1=ref_mm10,
+chrSide=c(-1,1,1,1,1,1,1,1), chr=c(2,11,17), stack=TRUE, figCol=3,
+bands=region, colAnnot1="blue")
+@
+\clearpage
+\section{Graphics settings}
+\subsection{Choosing side}
+\label{sec:chrSide}
+
+The user can choose a chromosome side for any track of data, except if given to
+the \texttt{bands} argument, in which case it is plotten on the body of the 
+chromosome. The \texttt{chrSide} parameter receives a vector with values 1 or -1
+for each genomic tracks (\texttt{annot1}, \texttt{annot2}, \texttt{annot3},
+\texttt{annot4}, \texttt{segment}, \texttt{segment2}, \texttt{stat} and
+\texttt{stat2}  placing them to the right (if -1) or to the left (if 1) of the
+ chromosomes.
+ 
+For demonstration, here we show the same track of data on two different sides.
+
+<<createGraph38, fig=TRUE, echo=TRUE, message=FALSE, results=hide, height=7>>=
+chromPlot(gaps=mm10_gap, bands=mm10_cytoBandIdeo, annot1=ref_mm10,
+annot2=ref_mm10, chrSide=c(-1, 1, 1, 1, 1, 1, 1, 1), chr=c(17:19), figCols=3)
+@
+
+\clearpage
+\subsection{Choosing colors}
+For each parameter that received a data.frame, the user can specify a color for
+plotting. If the data will be plotted as segments, the user can specify a vector
+of colors. The color will be assigned in the order provided to each level of 
+a category (when a Group columns is present in the data table). The color 
+parameters and their respective data tracks are as follows:
+\begin{enumerate}
+   \item \texttt{colAnnot1: annot1}
+   \item \texttt{colAnnot2: annot2}
+   \item \texttt{colAnnot3: annot3}
+   \item \texttt{colAnnot4: annot4}
+   \item \texttt{colSegments: segment}
+   \item \texttt{colSegments2: segment2}
+   \item \texttt{colStat: stat}
+   \item \texttt{colStat2: stat2}
+\end{enumerate}
+
+For data that are plotted individually, i.e. bands, segments, points in XY, or 
+data labels, it is possible to set an arbitrary color for each element by providing
+a color name in a column called ``Colors'' in the data table. Setting a value 
+in this way overrides any color provided in the above arguments for a given track.
+The user is responsible for providing color names that R understands. No check is
+done by chromPlot, but R will complain if a wrong name is used. For un example 
+of this use, see section~\ref{sec:arbitrarycolors}.
+
+
+\subsection{Placement of legends}
+\texttt{chromPlot} places the legends under the smallest or second smallest
+chromosome, depending on the number of legends needed. The legend for the
+second category of a segments track is placed in the middle-right of the plotting
+area of the smallest chromosome. These choices were made because they worked in
+most cases that we tested. However, the placement of legends in R not easily
+automated to produce optimal results in all situations. Depending on the
+particular conditions of a plot such as data density, chromosomes chosen, font 
+size and the size of the plotting device, the the legend by block viewing
+some data.
+
+When not pleased with the result of chromPlot's placing of legends, the user
+has two options:
+\begin{enumerate}
+  \item setting the \texttt{legChrom} argument to an arbitrary chromosome name. 
+        The legend will be placed under that chromosome. If more than one legend
+        is needed the first one will be placed under the chromosome before the
+        chosen chromosome, unless only one chromosome is plotted.
+  \item setting the \texttt{legChrom} to \texttt{NA} to omit plotting a legend.
+        The user can use the \texttt{legend()} function to create a custom
+        legend and can choose the best location by trial and error.
+\end{enumerate}
+
+\clearpage
+
+\section{Acknowledgments}
+This work was funded by a the FONDECYT Grant 11121666 by CONICYT,
+Government of Chile. We acknowledge all the users who have tested the software
+and provided valuable feedback. Particularly, Alejandro Blanco and
+Paloma Contreras.
+
+\section{REFERENCES}
+
+Verdugo, Ricardo A., Charles R. Farber, Craig H. Warden, and Juan F. Medrano.
+2010. “Serious Limitations of the QTL/Microarray Approach for QTL Gene
+Discovery.” BMC Biology 8 (1): 96. doi:10.1186/1741-7007-8-96.
+
+\end{document}
