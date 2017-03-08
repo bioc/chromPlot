@@ -9,7 +9,7 @@ colSegments=c("darkgreen","orange", "blue",  "darkslategray2", "cyan",
 "darkolivegreen", "maroon", "purple"), colSegments2=colSegments[-1L],
 colStat="blue", colStat2="orange", title=NULL, plotRndchr=FALSE, 
 maxSegs=200, noHist=FALSE, segLwd=3, sortSegs=TRUE, 
-chrSide=c(-1, -1, -1, -1, 1, 1, -1, 1), cex=0.75, legChrom, org=NULL,
+chrSide=c(-1, -1, -1, -1, 1, -1, -1, 1), cex=0.75, legChrom, org=NULL,
 strand=NULL, stack=TRUE, statThreshold=NULL, statThreshold2=NULL,
 statSumm="none") {
 ## chromPlot          
@@ -307,8 +307,13 @@ statSumm="none") {
         if(!is.null(annot1)){
             stop("Choose org or annot arguments to plot annotation data")
         } else{
-            print(org)
+            annot1 <- getObj(org)
+            if(is.null(annot1)) {
+                cat("Downloading gene annotations from Ensembl for organism: ",
+                    org, "\n")
             annot1 <- getAnnotBiomaRt(org, annotBiomaRt=TRUE)
+                saveObj(annot1, org)
+            }
         }
     } 
         
@@ -319,10 +324,10 @@ statSumm="none") {
     } 
     
     # Set chromosome lengths
-    if(!is.null(gaps)) {
-        chr.length <- as.list(tapply(gaps[ ,End], gaps[ ,Chrom], max)) 
-    } else if(!is.null(bands)) {
+    if(!is.null(bands)) {
         chr.length <- as.list(tapply(bands[ ,End], bands[ ,Chrom], max))
+    } else if(!is.null(gaps)) {
+        chr.length <- as.list(tapply(gaps[ ,End], gaps[ ,Chrom], max)) 
     } else if(!is.null(annot1)) {  
         chr.length  <- as.list(tapply(annot1[, End], annot1[ ,Chrom], max))  
     } else {
@@ -346,6 +351,7 @@ statSumm="none") {
     maxlen       <- max (unlist(chr.length)) 
     lastChrom    <- names (chr.length)[nchrom]
     smallestChr  <- which.min(unlist(chr.length))
+    smallestChr2 <- order(unlist(chr.length))[2]
     figRows      <- ceiling (nchrom/figCols)
 
     # Set chromosome to place legends
@@ -440,7 +446,7 @@ statSumm="none") {
     xlim=c(-maxGeneCount, maxGeneCount))
 
     xylims   <- par("usr")
-    chromwd  <- usr2pt ( margin, axisunit="x", lpi=96 )  
+    chromwd  <- usr2pt ( margin, axisunit="x", lpi=96) + 2  
     segLwd   <- segLwd*((11+5)/(figCols+5))
     trckMar  <- chrplotMar ( margin, chrSide, tracks=list(annot1Hist, 
     annot2Hist, annot3Hist, annot4Hist, chrsegs, chrsegs2, trackStat, 
@@ -450,10 +456,9 @@ statSumm="none") {
     tickLab     <- -floor(tickLoc-margin) 
     i           <- 0
     gnotPlotted <- TRUE
-    lnotPlotted <- TRUE
-    lnotPlotted <- TRUE
+    segnotPlotted  <- TRUE
+    seg2notPlotted <- TRUE
     snotPlotted <- TRUE
-    lanotPlotted<- TRUE
 
     for(chrom in names(chr.length)){
         cat ("Chrom", chrom, ":", chr.length[[chrom]], "bp\n")
@@ -554,13 +559,13 @@ statSumm="none") {
         if(snotPlotted & (chrom == lastChrom) & !is.null(stat2))
             if(attr(trackStat2, "sdstat")>0) {
                 draw.scale(y= 0.65 * chr.length[[chrom]] + 0.35 * xylims[3],
-                lwd=4, col=colScaleStat, minval=margin, maxval=maxGeneCount, 
+                lwd=4, col=colScaleStat2, minval=margin, maxval=maxGeneCount, 
                 minlab=realMinStat2, maxlab=realMaxStat2, title=statName2, 
                 cex=cex, as.is=TRUE) 
                 
                 snotPlotted <- FALSE
         }
-        if(!is.null(segment) & (i == smallestChr - 1 | chrom == lastChrom)) {
+        if(!is.null(segment) & (i == smallestChr2 - 1 | chrom == lastChrom) & segnotPlotted) {
             # Histogram, plot scale
             if(!attr(chrsegs, "is_int")){
                 draw.scale(y = 0.80 * chr.length[[chrom]] + 0.20 * xylims[3],
@@ -568,9 +573,10 @@ statSumm="none") {
                 minlab=attr(chrsegs, "count_range")[1],
                 maxlab=attr(chrsegs, "count_range")[2],
                 lwd=segLwd, col=colSegments, title=segmentDesc,  cex=cex)
+                segnotPlotted <-FALSE
             }  
         }  
-        if(!is.null(segment2) & (i == smallestChr - 1 | chrom == lastChrom)) {
+        if(!is.null(segment2) & (i == smallestChr2 - 1 | chrom == lastChrom) & seg2notPlotted) {
             # Histogram, plot scale
             if(!attr(chrsegs2, "is_int")){
                 draw.scale(y = 0.60 * chr.length[[chrom]] + 0.40 * xylims[3],
@@ -578,6 +584,7 @@ statSumm="none") {
                 minlab=attr(chrsegs2, "count_range")[1],
                 maxlab=attr(chrsegs2, "count_range")[2],
                 lwd=segLwd, col=colSegments2, title=segment2Desc,  cex=cex)
+                seg2notPlotted <-FALSE
             }    
         }  
 

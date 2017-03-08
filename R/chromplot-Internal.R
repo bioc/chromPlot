@@ -311,9 +311,7 @@ plot.track <- function(track_ls, which.track, margin, side=1, lwd=3,
             l=lines(side * (track$statSumm), track$mids,
                     col=seg_colors, type="l"),
             p=lines(side * (track$statSumm), track$mids, 
-                    col=seg_colors, type="p",
-            n=NULL,
-            pch=spty, cex=scex),
+                    col=seg_colors, type="p", n=NULL, pch=spty, cex=scex),
             hst=attr(track_ls, "is_int")<-FALSE,
             seg=attr(track_ls, "is_int")<-FALSE)     
         }
@@ -333,18 +331,18 @@ plot.track <- function(track_ls, which.track, margin, side=1, lwd=3,
                 }
             }
         } else{
-            cat("Small segments, I will plot histograms for this track:\n")
             if(flag==0){
+            cat("Small segments, I will plot histograms for this track:\n")
                 if(trckmar>margin) {
                     track$counts <- scale.vec(track$counts, margin, 1,trckmar,1)
                     margin <- trckmar
                 }
                 if(!is.null(dim(track$counts))) {
-                     plot.stackedHist(track, margin, ylims=NULL, col=col_segs, 
+                     plot.stackedHist(track, margin, ylims=NULL, col=col_segs[1], 
                                       stepsize=bin, side=side)
                 } else {
                      chromhist(side*margin, side*(track$counts),
-                     track$mids, ylims=NULL, col=col_segs, stepsize=bin)#bin
+                     track$mids, ylims=NULL, col=col_segs[1], stepsize=bin)#bin
                 }
             }   
         }
@@ -861,6 +859,8 @@ checkStructure <- function(data = NULL, rmrnd=FALSE,
                 "and will be removed.")
         data <- data[!areNA,]
     }
+    
+    # Assuming first column name is Chromosome
     data[,columnNames[1]] <- as.character(sub("^chr", "",
                                           as.character(data[,columnNames[1]])))
    
@@ -916,9 +916,9 @@ getAnnotBiomaRt <-function(org=NULL, annotBiomaRt=NULL ) {
             annot<-getBM(attributes=c("chromosome_name","start_position", 
             "end_position","ensembl_gene_id", "strand"),
             filters="chromosome_name",
-            values=list("1","2","3", "4", "5","6", "7", "8", "9", "10","11",
-            "12","13","14","15","16","17", "18","19", "20", "21", "22", "X",
-            "Y"), mart = ensembl)
+            values=as.list(as.character(c(1:40, paste(1:40, "L", sep=""),
+                           paste(1:40, "R", sep=""), "X", "Y")))
+            , mart = ensembl)
             
             colnames(annot)[1]<-"Chrom"
             colnames(annot)[2]<-"Start"
@@ -972,3 +972,27 @@ cytoBands<- function(data=NULL){
     return(data)
 }
 
+makeCache <- function() {
+    cache <- new.env(parent=emptyenv())
+    list(get = function(key) cache[[key]],
+         set = function(key, value) cache[[key]] <- value,
+         load = function(rdaFile) load(rdaFile, cache),
+         ls = function() ls(cache))
+}
+
+# Save an object in a chache
+saveObj <- function(object, oname, cname="chromPlot-cache") {
+      chrpltchache <- new.env(parent=emptyenv())
+      assign(oname, object, envir=chrpltchache)
+      attach(chrpltchache, name=cname)
+} # saveObj
+
+
+# Get object from cache. If not there, returns NULL silently
+getObj <- function(oname, cname="chromPlot-cache") {
+    if(exists(oname)) {
+        out <- get(oname)
+        return(out)
+    }
+    return(NULL)
+} # getObj

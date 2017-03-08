@@ -314,7 +314,7 @@ figCols=3)
 Using biomaRt package:
 \begin{Schunk}
 \begin{Sinput}
-> chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, org="mmusculus")
+> chromPlot(bands=hg_cytoBandIdeo, gaps=hg_gap, org="hsapiens")
 \end{Sinput}
 \end{Schunk}
 
@@ -474,7 +474,7 @@ head(xpehh)
 <<createGraph24, fig=TRUE, echo=TRUE, message=FALSE, results=hide, width=20, height=25>>=
 chromPlot(gaps=hg_gap, bands=fst, stat=ihs, stat2=xpehh, statCol="iHS",
 statCol2="XP", statName="iHS", statName2="normxpehh", colStat="red", colStat2="blue", statTyp="p", scex=2, spty=20, statThreshold=1.2, statThreshold2=1.5, chr=c(19:21),
-bin=1e6, figCols=3, cex=2.5, statSumm="none", legChrom=19, stack=FALSE)
+bin=1e6, figCols=3, cex=0.7, statSumm="none", legChrom=19, stack=FALSE)
 @
 
 \clearpage

@@ -17,7 +17,7 @@ colAnnot2="gold", colAnnot3="darkgreen", colAnnot4="blue", colSegments=c("darkgr
 "red", "green", "salmon", "darkolivegreen", "maroon", "purple"), 
 colSegments2=colSegments[-1L], colStat="blue", colStat2="orange", title=NULL,
 plotRndchr=FALSE, maxSegs=200, noHist=FALSE, segLwd=3, sortSegs=TRUE,
-chrSide=c(-1, -1, -1, -1, 1, 1, -1, 1), cex=0.75, legChrom, org=NULL, strand=NULL,
+chrSide=c(-1, -1, -1, -1, 1, -1, -1, 1), cex=0.75, legChrom, org=NULL, strand=NULL,
 stack=TRUE, statThreshold=NULL, statThreshold2=NULL, statSumm="none")
 }
 \arguments{
