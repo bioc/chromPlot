@@ -1,7 +1,7 @@
 Package: chromPlot
 Type: Package
 Title: Global visualization tool of genomic data
-Version: 1.8.0
+Version: 1.9.0
 Date: 2017-03-08
 Author: Ricardo A. Verdugo and Karen Y. Orostica
 Maintainer: Karen Y. Orostica <korostica09@gmail.com>
